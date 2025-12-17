@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🎄 圣诞树 🎄</title>
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #161616;
+        }
+ 
+        .message {
+            position: fixed;
+            left: 60px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #fff;
+            font-family: 'Brush Script MT', cursive;
+            text-align: left;
+            text-shadow: 0 0 15px rgba(255,255,255,0.6),
+                         0 0 30px rgba(255,255,255,0.4),
+                         0 0 45px rgba(255,255,255,0.2);
+            pointer-events: none;
+            z-index: 1000;
+            transition: transform 0.3s ease-out;
+        }
+ 
+        .message h1 {
+            font-size: 52px;
+            margin: 0;
+            opacity: 0;
+            animation: fadeInLeft 2s ease-out forwards;
+            letter-spacing: 2px;
+        }
+ 
+        .message p {
+            font-size: 28px;
+            margin: 20px 0;
+            opacity: 0;
+            animation: fadeInLeft 2s ease-out 1s forwards;
+        }
+ 
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-40px) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+ 
+        .author {
+            position: fixed;
+            right: 60px;
+            bottom: 50px;
+            color: #fff;
+            font-family: 'Brush Script MT', cursive;
+            text-align: right;
+            text-shadow: 0 0 15px rgba(255,255,255,0.6),
+                         0 0 30px rgba(255,255,255,0.4),
+                         0 0 45px rgba(255,255,255,0.2);
+            pointer-events: auto;
+            z-index: 1000;
+        }
+ 
+        .author p {
+            font-size: 26px;
+            margin: 0;
+            opacity: 0;
+            animation: fadeIn 2s ease-out 1.5s forwards;
+        }
+ 
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0) scale(1);
+            }
+        }
+        
+        /* 添加音乐状态提示 */
+        .music-status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #fff;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 10px;
+            border-radius: 10px;
+            opacity: 0.8;
+            z-index: 1001;
+            animation: fadeIn 1s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- 添加多个audio元素用于自动切换 -->
+    <audio id="christmasMusic1" loop>
+        <source src="https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Dott/This_Christmas/Dott_-_01_-_This_Christmas.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+    
+    <audio id="christmasMusic2">
+        <source src="https://assets.mixkit.co/music/preview/mixkit-christmas-is-coming-839.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+    
+    <audio id="christmasMusic3">
+        <source src="https://assets.mixkit.co/music/preview/mixkit-sleigh-bells-827.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+    
+    <audio id="christmasMusic4">
+        <source src="https://assets.mixkit.co/music/preview/mixkit-jingle-bells-831.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+    
+    <audio id="christmasMusic5">
+        <source src="https://assets.mixkit.co/music/preview/mixkit-christmas-time-112.mp3" type="audio/mpeg">
+        您的浏览器不支持音频元素。
+    </audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.115.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.115.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.115.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.115.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.115.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.115.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.115.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+ 
+    <script>
+        const { PI, sin, cos } = Math;
+        const TAU = 2 * PI;
+ 
+        const map = (value, sMin, sMax, dMin, dMax) => {
+            return dMin + (value - sMin) / (sMax - sMin) * (dMax - dMin);
+        };
+ 
+        const rand = (max, min = 0) => min + Math.random() * (max - min);
+        const randChoise = arr => arr[Math.floor(Math.random() * arr.length)];
+        const polar = (ang, r = 1) => [r * cos(ang), r * sin(ang)];
+ 
+        let scene, camera, renderer;
+        let step = 0;
+        const uniforms = {
+            time: { type: "f", value: 0.0 },
+            step: { type: "f", value: 0.0 }
+        };
+ 
+        const params = {
+            exposure: 1,
+            bloomStrength: 1.5,
+            bloomThreshold: 0,
+            bloomRadius: 0.7
+        };
+ 
+        let composer;
+        const totalPoints = 4000;
+        let treePoints;
+        let groundPoints;
+ 
+        let rotationSpeed = 0.002;
+        let isSpacePressed = false;
+ 
+        let isFlashing = false;
+        let originalStrength, originalThreshold;
+ 
+        let isDecorationsDancing = false;
+ 
+        let isSnowBig = false;
+ 
+        let cameraMode = 0;
+        let isTreeGreen = false;
+        
+        // 音乐相关变量
+        let isMusicPlaying = false;
+        let currentMusicIndex = 0;
+        let musicPlayers = [];
+        
+        // 颜色变换相关变量
+        let currentColorTheme = 0;
+        let colorChangeTimer = null;
+        let colorChangeInterval = 15000;
+        let isColorChanging = false;
+        
+        // 定义颜色主题
+        const colorThemes = [
+            {
+                name: "经典圣诞绿",
+                trunkColor: { h: 0.15, s: 0.8, l: 0.5 },
+                leafColor: { h: 0.3, s: 0.9, lRange: [0.85, 0.95] }
+            },
+            {
+                name: "冰雪奇缘蓝",
+                trunkColor: { h: 0.6, s: 0.3, l: 0.7 },
+                leafColor: { h: 0.65, s: 0.7, lRange: [0.8, 0.9] }
+            },
+            {
+                name: "梦幻紫罗兰",
+                trunkColor: { h: 0.8, s: 0.4, l: 0.6 },
+                leafColor: { h: 0.83, s: 0.8, lRange: [0.75, 0.85] }
+            },
+            {
+                name: "温暖橙色",
+                trunkColor: { h: 0.1, s: 0.7, l: 0.5 },
+                leafColor: { h: 0.08, s: 0.9, lRange: [0.8, 0.9] }
+            },
+            {
+                name: "神秘深蓝",
+                trunkColor: { h: 0.7, s: 0.6, l: 0.4 },
+                leafColor: { h: 0.68, s: 0.8, lRange: [0.6, 0.8] }
+            },
+            {
+                name: "浪漫粉红",
+                trunkColor: { h: 0.95, s: 0.4, l: 0.6 },
+                leafColor: { h: 0.92, s: 0.7, lRange: [0.8, 0.9] }
+            },
+            {
+                name: "金色辉煌",
+                trunkColor: { h: 0.12, s: 0.9, l: 0.5 },
+                leafColor: { h: 0.14, s: 0.8, lRange: [0.7, 0.9] }
+            },
+            {
+                name: "原始白色",
+                trunkColor: { h: 0, s: 0, l: 0.7 },
+                leafColor: { h: 0, s: 0, lRange: [0.7, 0.9] }
+            }
+        ];
+
+        // 更新音乐状态提示
+        function updateMusicStatus(message) {
+            const status = document.getElementById('musicStatus');
+            if (status) {
+                status.textContent = message;
+                setTimeout(() => {
+                    status.style.opacity = '0';
+                    setTimeout(() => {
+                        status.remove();
+                    }, 1000);
+                }, 3000);
+            }
+        }
+
+        // 初始化音乐系统 - 简化版
+        function initMusic() {
+            console.log("初始化音乐系统...");
+            updateMusicStatus("🎵 加载音乐中...");
+            
+            // 获取所有音乐播放器
+            musicPlayers = [
+                document.getElementById('christmasMusic1'),
+                document.getElementById('christmasMusic2'),
+                document.getElementById('christmasMusic3'),
+                document.getElementById('christmasMusic4'),
+                document.getElementById('christmasMusic5')
+            ];
+            
+            // 设置音乐播放器
+            musicPlayers.forEach((music, index) => {
+                music.volume = 0.3;
+                music.preload = "auto";
+                music.muted = false; // 不要静音
+                
+                // 添加ended事件监听
+                music.addEventListener('ended', () => {
+                    console.log(`音乐 ${index + 1} 播放结束，切换到下一首`);
+                    playNextMusic();
+                });
+                
+                music.addEventListener('error', (e) => {
+                    console.error(`音乐 ${index + 1} 加载错误:`, e);
+                    updateMusicStatus("❌ 音乐加载失败，切换到下一首");
+                    setTimeout(() => {
+                        playNextMusic();
+                    }, 1000);
+                });
+            });
+            
+            // 立即开始播放音乐
+            startMusicNow();
+        }
+
+        // 立即开始播放音乐
+        function startMusicNow() {
+            console.log("尝试立即播放音乐...");
+            
+            // 停止所有音乐
+            musicPlayers.forEach(music => {
+                try {
+                    music.pause();
+                    music.currentTime = 0;
+                } catch (e) {}
+            });
+            
+            // 设置当前音乐
+            musicPlayers[currentMusicIndex].volume = 0.3;
+            musicPlayers[currentMusicIndex].currentTime = 0;
+            
+            // 使用Promise尝试播放
+            const playAudio = () => {
+                return musicPlayers[currentMusicIndex].play()
+                    .then(() => {
+                        console.log(`🎵 成功播放第 ${currentMusicIndex + 1} 首歌`);
+                        isMusicPlaying = true;
+                        updateMusicStatus("音乐播放中...");
+                        return true;
+                    })
+                    .catch(error => {
+                        console.log(`播放失败: ${error.name} - ${error.message}`);
+                        return false;
+                    });
+            };
+            
+            // 立即尝试播放
+            playAudio().then(success => {
+                if (!success) {
+                    // 如果失败，等待用户交互
+                    updateMusicStatus(" 点击页面任意位置播放音乐");
+                    console.log("等待用户交互...");
+                    
+                    const startOnInteraction = () => {
+                        document.removeEventListener('click', startOnInteraction);
+                        document.removeEventListener('keydown', startOnInteraction);
+                        document.removeEventListener('mousedown', startOnInteraction);
+                        document.removeEventListener('touchstart', startOnInteraction);
+                        
+                        playAudio().then(() => {
+                            if (isMusicPlaying) {
+                                updateMusicStatus(" 音乐开始播放！");
+                            }
+                        });
+                    };
+                    
+                    // 添加多种交互监听
+                    document.addEventListener('click', startOnInteraction);
+                    document.addEventListener('keydown', startOnInteraction);
+                    document.addEventListener('mousedown', startOnInteraction);
+                    document.addEventListener('touchstart', startOnInteraction);
+                }
+            });
+            
+            // 添加全局点击事件作为备用
+            document.addEventListener('click', function autoPlayOnClick() {
+                if (!isMusicPlaying) {
+                    musicPlayers[currentMusicIndex].play()
+                        .then(() => {
+                            isMusicPlaying = true;
+                            console.log("用户点击后开始播放音乐");
+                            updateMusicStatus("🎵 音乐开始播放！");
+                        })
+                        .catch(e => {
+                            console.log("点击后播放失败:", e);
+                        });
+                }
+            }, { once: true });
+        }
+
+        // 播放下一首音乐
+        function playNextMusic() {
+            if (isMusicPlaying && musicPlayers[currentMusicIndex]) {
+                try {
+                    musicPlayers[currentMusicIndex].pause();
+                    musicPlayers[currentMusicIndex].currentTime = 0;
+                } catch (e) {}
+            }
+            
+            // 选择下一首
+            let nextIndex = (currentMusicIndex + 1) % musicPlayers.length;
+            currentMusicIndex = nextIndex;
+            
+            // 播放下一首
+            setTimeout(() => {
+                musicPlayers[currentMusicIndex].currentTime = 0;
+                musicPlayers[currentMusicIndex].volume = 0.3;
+                
+                musicPlayers[currentMusicIndex].play()
+                    .then(() => {
+                        isMusicPlaying = true;
+                        console.log(`🎵 切换到第 ${currentMusicIndex + 1} 首歌`);
+                    })
+                    .catch(e => {
+                        console.log(`播放失败:`, e);
+                        // 如果失败，继续尝试下一首
+                        if (isMusicPlaying) {
+                            setTimeout(() => {
+                                playNextMusic();
+                            }, 1000);
+                        }
+                    });
+            }, 500);
+        }
+
+        // 切换音乐播放/暂停
+        function toggleMusic() {
+            if (!musicPlayers[currentMusicIndex]) return;
+            
+            if (isMusicPlaying) {
+                musicPlayers[currentMusicIndex].pause();
+                isMusicPlaying = false;
+                console.log("音乐已暂停");
+                updateMusicStatus("⏸️ 音乐已暂停");
+            } else {
+                musicPlayers[currentMusicIndex].play()
+                    .then(() => {
+                        isMusicPlaying = true;
+                        console.log("音乐已恢复播放");
+                        updateMusicStatus("🎵 音乐恢复播放");
+                    })
+                    .catch(e => {
+                        console.log("恢复播放失败:", e);
+                    });
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !isSpacePressed) {
+                isSpacePressed = true;
+                rotationSpeed = 0.01;
+            }
+            
+            if (e.code === 'KeyA') {
+                isFlashing = !isFlashing;
+                if (isFlashing) {
+                    originalStrength = params.bloomStrength;
+                    originalThreshold = params.bloomThreshold;
+                    params.bloomStrength = 3.0;
+                    params.bloomThreshold = 0;
+                } else {
+                    params.bloomStrength = originalStrength;
+                    params.bloomThreshold = originalThreshold;
+                }
+                composer.passes[1].strength = params.bloomStrength;
+                composer.passes[1].threshold = params.bloomThreshold;
+            }
+
+            if (e.code === 'KeyR') {
+                // 红色圣诞树
+                const geometry = treePoints.geometry;
+                const colors = geometry.attributes.color.array;
+                const color = new THREE.Color();
+                
+                for (let i = 0; i < colors.length; i += 3) {
+                    if (i / colors.length > 0.1) {
+                        color.setHSL(0.0, 0.8, 0.5);
+                        colors[i] = color.r;
+                        colors[i + 1] = color.g;
+                        colors[i + 2] = color.b;
+                    }
+                }
+                geometry.attributes.color.needsUpdate = true;
+                
+                if (colorChangeTimer) {
+                    clearInterval(colorChangeTimer);
+                    colorChangeTimer = null;
+                }
+            }
+
+            if (e.code === 'KeyD') {
+                isDecorationsDancing = !isDecorationsDancing;
+            }
+
+            if (e.code === 'KeyS') {
+                isSnowBig = !isSnowBig;
+                scene.children.forEach(child => {
+                    if (child.material && child.material.uniforms && child.material.uniforms.time) {
+                        const sizes = child.geometry.attributes.size.array;
+                        for (let i = 0; i < sizes.length; i++) {
+                            sizes[i] = isSnowBig ? sizes[i] * 2 : sizes[i] / 2;
+                        }
+                        child.geometry.attributes.size.needsUpdate = true;
+                    }
+                });
+            }
+
+            if (e.code === 'KeyC') {
+                cameraMode = (cameraMode + 1) % 3;
+                switch(cameraMode) {
+                    case 0:
+                        camera.position.set(0, -2, 42);
+                        camera.rotation.set(0.12, 0, 0);
+                        break;
+                    case 1:
+                        camera.position.set(0, 50, 0);
+                        camera.rotation.set(-Math.PI/2, 0, 0);
+                        break;
+                    case 2:
+                        camera.position.set(42, -2, 0);
+                        camera.rotation.set(0.12, Math.PI/2, 0);
+                        break;
+                }
+            }
+
+            if (e.code === 'KeyM') {
+                e.preventDefault();
+                toggleMusic();
+            }
+            
+            if (e.code === 'KeyN') {
+                e.preventDefault();
+                playNextMusic();
+                updateMusicStatus("⏭️ 切换到下一首");
+            }
+            
+            if (e.code === 'ArrowUp') {
+                e.preventDefault();
+                const currentVolume = musicPlayers[currentMusicIndex].volume;
+                const newVolume = Math.min(1, currentVolume + 0.1);
+                musicPlayers.forEach(music => {
+                    music.volume = newVolume;
+                });
+                console.log(`音量增加至: ${Math.round(newVolume * 100)}%`);
+                updateMusicStatus(`🔊 音量: ${Math.round(newVolume * 100)}%`);
+            }
+            
+            if (e.code === 'ArrowDown') {
+                e.preventDefault();
+                const currentVolume = musicPlayers[currentMusicIndex].volume;
+                const newVolume = Math.max(0, currentVolume - 0.1);
+                musicPlayers.forEach(music => {
+                    music.volume = newVolume;
+                });
+                console.log(`音量减少至: ${Math.round(newVolume * 100)}%`);
+                updateMusicStatus(`🔊 音量: ${Math.round(newVolume * 100)}%`);
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                isSpacePressed = false;
+                rotationSpeed = 0.002;
+            }
+        });
+
+        init();
+        animate();
+        
+        // 页面加载完成后初始化
+        window.addEventListener('load', function() {
+            console.log("页面加载完成");
+            initMusic();
+            // 初始化颜色变换
+            if (colorChangeTimer) {
+                clearInterval(colorChangeTimer);
+            }
+            colorChangeTimer = setInterval(() => {
+                changeToNextColorTheme();
+            }, 15000);
+        });
+
+        function init() {
+            scene = new THREE.Scene();
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setPixelRatio(window.devicePixelRatio);
+ 
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+ 
+            camera = new THREE.PerspectiveCamera(
+                60,
+                window.innerWidth / window.innerHeight,
+                1,
+                1000
+            );
+            camera.position.set(0, -2, 42);
+            camera.rotation.set(0.12, 0, 0);
+ 
+            scene.position.x = 0;
+            scene.position.z = 1;
+ 
+            addTree(scene, uniforms, 4000, [0, 0, 0]);
+            addDecorations(scene, uniforms, 150);
+            addSnow(scene, uniforms, 600);
+            addPlane(scene, uniforms, 3000);
+ 
+            const renderScene = new THREE.RenderPass(scene, camera);
+            const bloomPass = new THREE.UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                1.8,
+                0.35,
+                0.85
+            );
+ 
+            bloomPass.threshold = params.bloomThreshold;
+            bloomPass.strength = params.bloomStrength;
+            bloomPass.radius = params.bloomRadius;
+ 
+            composer = new THREE.EffectComposer(renderer);
+            composer.addPass(renderScene);
+            composer.addPass(bloomPass);
+ 
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        function animate(time) {
+            step = (step + 1) % 1000;
+            uniforms.time.value = time;
+            uniforms.step.value = step;
+            
+            if (treePoints) {
+                treePoints.rotation.y += rotationSpeed;
+                
+                if (groundPoints) {
+                    groundPoints.rotation.y = treePoints.rotation.y;
+                }
+            }
+            
+            if (isDecorationsDancing) {
+                scene.children.forEach(child => {
+                    if (child.material && child.material.uniforms && child.material.uniforms.time) {
+                        const positions = child.geometry.attributes.position.array;
+                        for (let i = 0; i < positions.length; i += 3) {
+                            positions[i] += Math.sin(time * 0.001 + positions[i+1]) * 0.02;
+                            positions[i+2] += Math.cos(time * 0.001 + positions[i+1]) * 0.02;
+                        }
+                        child.geometry.attributes.position.needsUpdate = true;
+                    }
+                });
+            }
+            
+            composer.render();
+            requestAnimationFrame(animate);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // 其余函数保持不变...
+        function addTree(scene, uniforms, totalPoints, treePosition, scale = 1) {
+            const vertexShader = `
+    attribute float mIndex;
+    varying vec3 vColor;
+    varying float opacity;
+    
+    float norm(float value, float min, float max ){
+        return (value - min) / (max - min);
+    }
+    float lerp(float norm, float min, float max){
+        return (max - min) * norm + min;
+    }
+    float map(float value, float sourceMin, float sourceMax, float destMin, float destMax){
+        return lerp(norm(value, sourceMin, sourceMax), destMin, destMax);
+    }
+    void main() {
+        vColor = color;
+        vec3 p = position;
+        vec4 mvPosition = modelViewMatrix * vec4( p, 1.0 );
+        opacity = map(mvPosition.z , -200.0, 15.0, 0.0, 1.0);
+        gl_PointSize = 4.0 * ( 100.0 / -mvPosition.z );
+        gl_Position = projectionMatrix * mvPosition;
+    }
+    `;
+            const fragmentShader = `
+    varying vec3 vColor;
+    varying float opacity;
+    uniform sampler2D pointTexture;
+    void main() {
+        gl_FragColor = vec4( vColor, opacity );
+        gl_FragColor = gl_FragColor * texture2D( pointTexture, gl_PointCoord ); 
+    }
+    `;
+            const shaderMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    pointTexture: {
+                        value: new THREE.TextureLoader().load(`https://assets.codepen.io/3685267/spark1.png`)
+                    }
+                },
+                vertexShader,
+                fragmentShader,
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                transparent: true,
+                vertexColors: true
+            });
+ 
+ 
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+            const phases = [];
+            const mIndexs = [];
+            const color = new THREE.Color();
+ 
+            for (let i = 0; i < totalPoints; i++) {
+                const randomT = Math.random();
+                
+                const y = map(randomT, 0, 1, -16 * scale, 20 * scale);
+                const ang = map(randomT, 0, 1, 0, 6 * TAU) + TAU / 2 * (i % 2);
+                
+                let radius;
+                if (randomT < 0.1) {
+                    radius = 2 * scale;
+                } else {
+                    const treeTop = (randomT - 0.1) / 0.9;
+                    radius = map(Math.pow(treeTop, 0.6), 0, 1, 15 * scale, 0);
+                }
+                const [z, x] = polar(ang, radius);
+ 
+                const modifier = randomT < 0.1 ? 0.2 : map(randomT, 0.1, 1, 1.5, 0.5);
+                positions.push(
+                    x + rand(-0.15 * modifier, 0.15 * modifier) * scale,
+                    y + rand(-0.1 * modifier, 0.1 * modifier) * scale,
+                    z + rand(-0.15 * modifier, 0.15 * modifier) * scale
+                );
+ 
+                const t = map(i, 0, totalPoints, 0.0, 1.0);
+                if (t < 0.1) {
+                    color.setHSL(colorThemes[0].trunkColor.h, colorThemes[0].trunkColor.s, colorThemes[0].trunkColor.l);
+                } else {
+                    const brightness = map(t, 0.1, 1, colorThemes[0].leafColor.lRange[0], colorThemes[0].leafColor.lRange[1]);
+                    color.setHSL(colorThemes[0].leafColor.h, colorThemes[0].leafColor.s, brightness);
+                }
+ 
+                colors.push(color.r, color.g, color.b);
+                phases.push(rand(1000));
+                
+                if (t < 0.1) {
+                    sizes.push(2.5 * scale);
+                } else {
+                    const size = map(t, 0.1, 1, 2.2, 1.6) * scale;
+                    sizes.push(size * (1 + rand(-0.1, 0.1)));
+                }
+                
+                const mIndex = map(i, 0, totalPoints, 1.0, 0.0);
+                mIndexs.push(mIndex);
+            }
+ 
+            geometry.setAttribute(
+                "position",
+                new THREE.Float32BufferAttribute(positions, 3).setUsage(
+                    THREE.DynamicDrawUsage));
+ 
+ 
+            geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
+            geometry.setAttribute("phase", new THREE.Float32BufferAttribute(phases, 1));
+            geometry.setAttribute("mIndex", new THREE.Float32BufferAttribute(mIndexs, 1));
+ 
+            const tree = new THREE.Points(geometry, shaderMaterial);
+ 
+            const [px, py, pz] = treePosition;
+ 
+            tree.position.x = px;
+            tree.position.y = py;
+            tree.position.z = pz;
+ 
+            treePoints = tree;
+            scene.add(tree);
+        }
+
+        function addSnow(scene, uniforms, totalPoints) {
+            const vertexShader = `
+    attribute float size;
+    attribute float phase;
+    attribute float phaseSecondary;
+    varying vec3 vColor;
+    varying float opacity;
+    uniform float time;
+    uniform float step;
+    float norm(float value, float min, float max ){
+        return (value - min) / (max - min);
+    }
+    float lerp(float norm, float min, float max){
+        return (max - min) * norm + min;
+    }
+    float map(float value, float sourceMin, float sourceMax, float destMin, float destMax){
+        return lerp(norm(value, sourceMin, sourceMax), destMin, destMax);
+    }
+    
+    float random(float x) {
+        return fract(sin(x) * 43758.5453);
+    }
+    void main() {
+        float t = time * 0.0006;
+        vColor = color;
+        vec3 p = position;
+        
+        float yOffset = mod(phase + step, 1000.0);
+        p.y = map(yOffset, 0.0, 1000.0, 25.0, -8.0);
+        
+        float xOffset = sin(t + phase) * (random(phase) * 2.0 + 0.5);
+        float zOffset = cos(t + phaseSecondary) * (random(phaseSecondary) * 2.0 + 0.5);
+        
+        float rot = t * random(phase + phaseSecondary);
+        p.x += xOffset + sin(rot) * random(phase);
+        p.z += zOffset + cos(rot) * random(phaseSecondary);
+        
+        opacity = map(p.z, -150.0, 15.0, 0.0, 1.0);
+        vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = size * (100.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+    }
+    `;
+ 
+            const fragmentShader = `
+      uniform sampler2D pointTexture;
+      varying vec3 vColor;
+      varying float opacity;
+      void main() {
+       gl_FragColor = vec4( vColor, opacity );
+       gl_FragColor = gl_FragColor * texture2D( pointTexture, gl_PointCoord ); 
+      }
+      `;
+            function createSnowSet(sprite) {
+                const totalPoints = 600;
+                const shaderMaterial = new THREE.ShaderMaterial({
+                    uniforms: {
+                        ...uniforms,
+                        pointTexture: {
+                            value: new THREE.TextureLoader().load(sprite)
+                        }
+                    },
+ 
+ 
+                    vertexShader,
+                    fragmentShader,
+                    blending: THREE.AdditiveBlending,
+                    depthTest: false,
+                    transparent: true,
+                    vertexColors: true
+                });
+ 
+ 
+                const geometry = new THREE.BufferGeometry();
+                const positions = [];
+                const colors = [];
+                const sizes = [];
+                const phases = [];
+                const phaseSecondaries = [];
+ 
+                const color = new THREE.Color();
+ 
+                for (let i = 0; i < totalPoints; i++) {
+                    const [x, y, z] = [rand(100, -100), 0, rand(80, -400)];
+                    positions.push(x);
+                    positions.push(y);
+                    positions.push(z);
+ 
+                    if (Math.random() > 0.75) {
+                        color.set(randChoise(["#ffffff", "#ffffff", "#fafaff"]));
+                        sizes.push(rand(6, 4));
+                    } else if (Math.random() > 0.5) {
+                        color.set(randChoise(["#ffffff", "#f8f8ff"]));
+                        sizes.push(rand(4, 2.5));
+                    } else {
+                        color.set(randChoise(["#f1f6f9", "#eeeeee", "#e8e8e8"]));
+                        sizes.push(rand(2.5, 1.5));
+                    }
+                    
+                    colors.push(color.r, color.g, color.b);
+                    phases.push(rand(1000));
+                    phaseSecondaries.push(rand(1000));
+                }
+ 
+                geometry.setAttribute(
+                    "position",
+                    new THREE.Float32BufferAttribute(positions, 3));
+ 
+                geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+                geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
+                geometry.setAttribute("phase", new THREE.Float32BufferAttribute(phases, 1));
+                geometry.setAttribute(
+                    "phaseSecondary",
+                    new THREE.Float32BufferAttribute(phaseSecondaries, 1));
+ 
+ 
+                const mesh = new THREE.Points(geometry, shaderMaterial);
+ 
+                scene.add(mesh);
+            }
+            const sprites = [
+                "https://assets.codepen.io/3685267/snowflake1.png",
+                "https://assets.codepen.io/3685267/snowflake2.png",
+                "https://assets.codepen.io/3685267/snowflake3.png",
+                "https://assets.codepen.io/3685267/snowflake4.png",
+                "https://assets.codepen.io/3685267/snowflake5.png",
+                "https://assets.codepen.io/3685267/snowflake1.png",
+                "https://assets.codepen.io/3685267/snowflake2.png",
+                "https://assets.codepen.io/3685267/snowflake3.png",
+                "https://assets.codepen.io/3685267/snowflake4.png"
+            ];
+ 
+            sprites.forEach(sprite => {
+                createSnowSet(sprite);
+            });
+        }
+
+        function addPlane(scene, uniforms, totalPoints) {
+            const vertexShader = `
+        attribute float size;
+        attribute vec3 customColor;
+        varying vec3 vColor;
+        
+        void main() {
+            vColor = customColor;
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            gl_PointSize = size * (300.0 / -mvPosition.z);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    `;
+ 
+            const fragmentShader = `
+        uniform vec3 color;
+        uniform sampler2D pointTexture;
+        varying vec3 vColor;
+        void main() {
+            gl_FragColor = vec4(vColor, 1.0);
+            gl_FragColor = gl_FragColor * texture2D(pointTexture, gl_PointCoord);
+        }
+    `;
+ 
+            const shaderMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    ...uniforms,
+                    pointTexture: {
+                        value: new THREE.TextureLoader().load(`https://assets.codepen.io/3685267/spark1.png`)
+                    }
+                },
+                vertexShader,
+                fragmentShader,
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                transparent: true,
+                vertexColors: true
+            });
+ 
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+            const color = new THREE.Color();
+ 
+            for (let i = 0; i < totalPoints; i++) {
+                const angle = rand(0, TAU);
+                const r = Math.sqrt(rand(0, 2500));
+                const [x, z] = polar(angle, r);
+                
+                positions.push(x);
+                positions.push(0);
+                positions.push(z);
+ 
+                const distanceFromCenter = Math.sqrt(x * x + z * z);
+                if (distanceFromCenter < 25) {
+                    color.set(randChoise(["#ffffff", "#fafaff", "#f8f8ff"]));
+                    sizes.push(rand(2.2, 1.6));
+                } else {
+                    const brightness = map(distanceFromCenter, 25, 50, 0.95, 0.85);
+                    color.setHSL(0, 0, brightness);
+                    sizes.push(rand(1.6, 0.9));
+                }
+ 
+                colors.push(color.r, color.g, color.b);
+            }
+ 
+            geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute("customColor", new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
+ 
+            const plane = new THREE.Points(geometry, shaderMaterial);
+            plane.position.y = -16;
+            groundPoints = plane;
+            scene.add(plane);
+        }
+
+        function addDecorations(scene, uniforms, totalPoints) {
+            const vertexShader = `
+                attribute float size;
+                varying vec3 vColor;
+                varying float opacity;
+                uniform float time;
+                
+                void main() {
+                    vColor = color;
+                    vec3 p = position;
+                    vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+                    opacity = 0.7;
+                    float scale = 0.8 + sin(time * 0.001 + position.x) * 0.2;
+                    gl_PointSize = size * scale * (100.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `;
+ 
+            const fragmentShader = `
+                varying vec3 vColor;
+                varying float opacity;
+                uniform sampler2D pointTexture;
+                void main() {
+                    gl_FragColor = vec4(vColor, opacity);
+                    gl_FragColor = gl_FragColor * texture2D(pointTexture, gl_PointCoord);
+                }
+            `;
+ 
+            const shaderMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    ...uniforms,
+                    pointTexture: {
+                        value: new THREE.TextureLoader().load(`https://assets.codepen.io/3685267/spark1.png`)
+                    }
+                },
+                vertexShader,
+                fragmentShader,
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                transparent: true,
+                vertexColors: true
+            });
+ 
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            const colors = [];
+            const sizes = [];
+            const color = new THREE.Color();
+ 
+            const decorationPoints = 150;
+            for (let i = 0; i < decorationPoints; i++) {
+                const angle = (i / decorationPoints) * TAU;
+                const radius = 15 + rand(-5, 5);
+                const height = rand(-12, 22);
+                const [x, z] = polar(angle, radius);
+ 
+                positions.push(x, height, z);
+ 
+                if (Math.random() > 0.7) {
+                    const hue = rand(0.1, 0.15);
+                    const saturation = rand(0.7, 0.9);
+                    const lightness = rand(0.6, 0.8);
+                    color.setHSL(hue, saturation, lightness);
+                } else if (Math.random() > 0.4) {
+                    const hue = rand(0.95, 1.0);
+                    const saturation = rand(0.7, 0.9);
+                    const lightness = rand(0.5, 0.7);
+                    color.setHSL(hue, saturation, lightness);
+                } else {
+                    const lightness = rand(0.8, 0.95);
+                    color.setHSL(0, 0, lightness);
+                }
+                
+                colors.push(color.r, color.g, color.b);
+                sizes.push(rand(2.5, 4.5));
+            }
+ 
+            geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+            geometry.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+            geometry.setAttribute("size", new THREE.Float32BufferAttribute(sizes, 1));
+ 
+            const decorations = new THREE.Points(geometry, shaderMaterial);
+            scene.add(decorations);
+        }
+
+        // 颜色变换相关函数
+        function changeToNextColorTheme() {
+            if (isColorChanging) return;
+            
+            isColorChanging = true;
+            currentColorTheme = (currentColorTheme + 1) % colorThemes.length;
+            applyColorTheme(currentColorTheme);
+            
+            setTimeout(() => {
+                isColorChanging = false;
+            }, 500);
+        }
+        
+        function applyColorTheme(themeIndex) {
+            if (!treePoints) return;
+            
+            const theme = colorThemes[themeIndex];
+            const geometry = treePoints.geometry;
+            const colors = geometry.attributes.color.array;
+            const color = new THREE.Color();
+            
+            for (let i = 0; i < colors.length; i += 3) {
+                const t = i / colors.length;
+                if (t < 0.1) {
+                    color.setHSL(theme.trunkColor.h, theme.trunkColor.s, theme.trunkColor.l);
+                } else {
+                    const brightness = map(t, 0.1, 1, theme.leafColor.lRange[0], theme.leafColor.lRange[1]);
+                    color.setHSL(theme.leafColor.h, theme.leafColor.s, brightness);
+                }
+                
+                colors[i] = color.r;
+                colors[i + 1] = color.g;
+                colors[i + 2] = color.b;
+            }
+            
+            geometry.attributes.color.needsUpdate = true;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const author = document.querySelector('.author');
+            const maxDistance = 150;
+            
+            document.addEventListener('mousemove', (e) => {
+                const authorRect = author.getBoundingClientRect();
+                const authorCenter = {
+                    x: authorRect.left + authorRect.width / 2,
+                    y: authorRect.top + authorRect.height / 2
+                };
+                
+                const authorDistance = Math.hypot(
+                    e.clientX - authorCenter.x,
+                    e.clientY - authorCenter.y
+                );
+                
+                if (authorDistance < maxDistance) {
+                    const angle = Math.atan2(
+                        authorCenter.y - e.clientY,
+                        authorCenter.x - e.clientX
+                    );
+                    const force = (maxDistance - authorDistance) / maxDistance;
+                    const moveX = Math.cos(angle) * force * 60;
+                    const moveY = Math.sin(angle) * force * 60;
+                    
+                    author.style.transform = `translate(${moveX}px, ${moveY}px)`;
+                    author.style.transition = 'transform 0.2s ease-out';
+                } else {
+                    author.style.transform = 'none';
+                    author.style.transition = 'transform 0.5s ease-out';
+                }
+            });
+        });
+    </script>
+ 
+    <div class="message">
+        <h1>Merry Christmas</h1>
+        <p>--To：何情</p>
+    </div>
+ 
+    <div class="author">
+        <p>By：Gane</p>
+    </div>
+</body>
+</html>
